@@ -201,7 +201,7 @@ export default function Home() {
         <div className="hero-grid">
           <div className="hero-copy">
             <div className="eyebrow"><Activity size={15} /> UnifiedMeasurement · ECG HPF 0.8 Hz</div>
-            <h1>Visual validator for the ECG filter on the <span>neolink</span> branch</h1>
+            <h1>Visual validator for the ECG filter</h1>
             <p>
               Paste the original samples and the filtered samples received from the parser. This page recalculates the same 2nd-order Butterworth high-pass filter used in <code>UnifiedMeasurement</code>, overlays a reference sine wave, and measures error, correlation, RMS, and slow-component removal.
             </p>
