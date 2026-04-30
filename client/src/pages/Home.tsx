@@ -101,7 +101,7 @@ function pearson(a: number[], b: number[]) {
 
 function safeFixed(value: number, digits = 6) {
   if (!Number.isFinite(value)) return "—";
-  return value.toLocaleString("pt-BR", { maximumFractionDigits: digits });
+  return value.toLocaleString("en-US", { maximumFractionDigits: digits });
 }
 
 function createDemo(sampleRateHz: number, sineHz: number) {
@@ -177,11 +177,11 @@ export default function Home() {
       index,
       time: index / sampleRateHz,
       original: original[index] ?? null,
-      recebido: receivedFiltered[index] ?? null,
-      esperado: expectedFiltered[index] ?? null,
-      senoide: sineReference[index] ?? null,
-      toleranciaPos: expectedFiltered[index] != null ? expectedFiltered[index] + 0.001 : null,
-      toleranciaNeg: expectedFiltered[index] != null ? expectedFiltered[index] - 0.001 : null,
+      received: receivedFiltered[index] ?? null,
+      expected: expectedFiltered[index] ?? null,
+      sine: sineReference[index] ?? null,
+      positiveTolerance: expectedFiltered[index] != null ? expectedFiltered[index] + 0.001 : null,
+      negativeTolerance: expectedFiltered[index] != null ? expectedFiltered[index] - 0.001 : null,
     }));
   }, [expectedFiltered, original, receivedFiltered, sampleRateHz, sineReference]);
 
@@ -200,14 +200,14 @@ export default function Home() {
       <section className="hero-shell" style={{ backgroundImage: `linear-gradient(90deg, rgba(244,241,234,.96) 0%, rgba(244,241,234,.86) 48%, rgba(244,241,234,.35) 100%), url(${HERO_IMAGE})` }}>
         <div className="hero-grid">
           <div className="hero-copy">
-            <div className="eyebrow"><Activity size={15} /> UnifiedMeasurement · ECG HPF 0,8 Hz</div>
-            <h1>Validador visual para o filtro ECG da branch <span>neolink</span></h1>
+            <div className="eyebrow"><Activity size={15} /> UnifiedMeasurement · ECG HPF 0.8 Hz</div>
+            <h1>Visual validator for the ECG filter on the <span>neolink</span> branch</h1>
             <p>
-              Cole as amostras originais e as amostras filtradas recebidas pelo parser. A página recalcula o mesmo Butterworth passa-alta de 2ª ordem usado em <code>UnifiedMeasurement</code>, sobrepõe uma senoide de referência e mede erro, correlação, RMS e remoção de componente lenta.
+              Paste the original samples and the filtered samples received from the parser. This page recalculates the same 2nd-order Butterworth high-pass filter used in <code>UnifiedMeasurement</code>, overlays a reference sine wave, and measures error, correlation, RMS, and slow-component removal.
             </p>
           </div>
           <aside className="coefficient-card" style={{ backgroundImage: `linear-gradient(180deg, rgba(255,255,255,.90), rgba(255,255,255,.78)), url(${COEFFICIENT_IMAGE})` }}>
-            <p>coeficientes ativos</p>
+            <p>active coefficients</p>
             <dl>
               <div><dt>b0</dt><dd>{safeFixed(coefficients.b0, 8)}</dd></div>
               <div><dt>b1</dt><dd>{safeFixed(coefficients.b1, 8)}</dd></div>
@@ -222,32 +222,32 @@ export default function Home() {
       <section className="workbench">
         <aside className="input-rail">
           <div className="panel settings-panel">
-            <div className="panel-title"><SlidersHorizontal size={17} /> Parâmetros</div>
+            <div className="panel-title"><SlidersHorizontal size={17} /> Parameters</div>
             <label>
-              Frequência de amostragem (Hz)
+              Sample rate (Hz)
               <input type="number" min="1" value={sampleRateHz} onChange={(event) => setSampleRateHz(Math.max(1, Number(event.target.value) || DEFAULT_SAMPLE_RATE))} />
             </label>
             <label>
-              Senoide de referência (Hz)
+              Reference sine wave (Hz)
               <input type="number" min="0.01" step="0.01" value={sineHz} onChange={(event) => setSineHz(Math.max(0.01, Number(event.target.value) || DEFAULT_SINE_HZ))} />
             </label>
             <label>
-              Ignorar transiente inicial (amostras)
+              Ignore initial transient (samples)
               <input type="number" min="0" value={ignoreTransient} onChange={(event) => setIgnoreTransient(Math.max(0, Number(event.target.value) || 0))} />
             </label>
             <div className="button-row">
               <button onClick={() => loadDemo()}><RotateCcw size={15} /> Demo</button>
-              <button onClick={copyExpected}><Copy size={15} /> Copiar esperado</button>
+              <button onClick={copyExpected}><Copy size={15} /> Copy expected</button>
             </div>
           </div>
 
           <div className="panel text-panel">
             <label>
-              Amostras originais
+              Original samples
               <textarea value={originalText} onChange={(event) => setOriginalText(event.target.value)} spellCheck={false} />
             </label>
             <label>
-              Amostras filtradas recebidas
+              Received filtered samples
               <textarea value={filteredText} onChange={(event) => setFilteredText(event.target.value)} spellCheck={false} />
             </label>
           </div>
@@ -257,27 +257,27 @@ export default function Home() {
           <div className="status-strip">
             <div className={`status-badge ${analysis.pass ? "pass" : "review"}`}>
               {analysis.pass ? <CheckCircle2 size={18} /> : <TriangleAlert size={18} />}
-              {analysis.pass ? "compatível com o filtro" : "revisar tolerância ou entrada"}
+              {analysis.pass ? "matches the filter" : "review tolerance or input"}
             </div>
             <div className="status-note">
-              {analysis.warning ? "Os vetores têm tamanhos diferentes; as métricas usam apenas a interseção." : `Comparando ${analysis.length} amostras após índice ${analysis.start}.`}
+              {analysis.warning ? "The vectors have different lengths; metrics use only the intersection." : `Comparing ${analysis.length} samples after index ${analysis.start}.`}
             </div>
           </div>
 
           <div className="metrics-grid">
-            <AppMetric label="RMSE vs. referência" value={safeFixed(analysis.rmse, 8)} detail="erro quadrático médio do filtro recebido" tone={analysis.rmse <= 1e-4 ? "good" : "warn"} />
-            <AppMetric label="Erro máximo absoluto" value={safeFixed(analysis.maxAbsError, 8)} detail="maior diferença ponto a ponto" tone={analysis.maxAbsError <= 1e-3 ? "good" : "warn"} />
-            <AppMetric label="Correlação" value={safeFixed(analysis.correlationToReference, 6)} detail="filtrado recebido × filtrado esperado" tone={analysis.correlationToReference >= 0.999 ? "good" : "neutral"} />
-            <AppMetric label="DC antes → depois" value={`${safeFixed(analysis.dcBefore, 5)} → ${safeFixed(analysis.dcAfter, 5)}`} detail="média absoluta após transiente" tone={analysis.dcAfter <= analysis.dcBefore ? "good" : "warn"} />
+            <AppMetric label="RMSE vs. reference" value={safeFixed(analysis.rmse, 8)} detail="root mean square error of the received filter output" tone={analysis.rmse <= 1e-4 ? "good" : "warn"} />
+            <AppMetric label="Maximum absolute error" value={safeFixed(analysis.maxAbsError, 8)} detail="largest point-by-point difference" tone={analysis.maxAbsError <= 1e-3 ? "good" : "warn"} />
+            <AppMetric label="Correlation" value={safeFixed(analysis.correlationToReference, 6)} detail="received filtered × expected filtered" tone={analysis.correlationToReference >= 0.999 ? "good" : "neutral"} />
+            <AppMetric label="DC before → after" value={`${safeFixed(analysis.dcBefore, 5)} → ${safeFixed(analysis.dcAfter, 5)}`} detail="absolute mean after transient" tone={analysis.dcAfter <= analysis.dcBefore ? "good" : "warn"} />
           </div>
 
           <div className="chart-panel" style={{ backgroundImage: `linear-gradient(180deg, rgba(255,255,255,.93), rgba(255,255,255,.90)), url(${GRID_IMAGE})` }}>
             <header>
               <div>
-                <p><Gauge size={16} /> traçado comparativo</p>
-                <h2>Original, filtrado recebido, filtrado esperado e senoide</h2>
+                <p><Gauge size={16} /> comparative trace</p>
+                <h2>Original, received filtered, expected filtered, and sine wave</h2>
               </div>
-              <span>{chartData.length} pontos desenhados</span>
+              <span>{chartData.length} rendered points</span>
             </header>
             <div className="chart-box">
               <ResponsiveContainer width="100%" height="100%">
@@ -285,13 +285,13 @@ export default function Home() {
                   <CartesianGrid stroke="#cbd5d1" strokeDasharray="2 6" />
                   <XAxis dataKey="time" type="number" tickFormatter={(value) => `${Number(value).toFixed(1)}s`} stroke="#52605b" tick={{ fontSize: 11 }} />
                   <YAxis stroke="#52605b" tick={{ fontSize: 11 }} width={46} />
-                  <Tooltip formatter={(value: number | string) => (typeof value === "number" ? safeFixed(value, 6) : value)} labelFormatter={(label) => `tempo: ${safeFixed(Number(label), 4)} s`} contentStyle={{ borderRadius: 0, border: "1px solid #94a39e", fontFamily: "IBM Plex Mono, monospace" }} />
+                  <Tooltip formatter={(value: number | string) => (typeof value === "number" ? safeFixed(value, 6) : value)} labelFormatter={(label) => `time: ${safeFixed(Number(label), 4)} s`} contentStyle={{ borderRadius: 0, border: "1px solid #94a39e", fontFamily: "IBM Plex Mono, monospace" }} />
                   <Legend wrapperStyle={{ fontFamily: "IBM Plex Sans, sans-serif", fontSize: 12 }} />
-                  <Area type="monotone" dataKey="toleranciaPos" name="tolerância +0,001" stroke="none" fill="#f2b84b" fillOpacity={0.06} isAnimationActive={false} />
+                  <Area type="monotone" dataKey="positiveTolerance" name="tolerance +0.001" stroke="none" fill="#f2b84b" fillOpacity={0.06} isAnimationActive={false} />
                   <Line type="monotone" dataKey="original" name="original" stroke="#55706b" strokeWidth={1.25} dot={false} opacity={0.58} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="recebido" name="filtrado recebido" stroke="#0c6b56" strokeWidth={2.1} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="esperado" name="filtrado esperado" stroke="#1e67a6" strokeWidth={1.8} dot={false} strokeDasharray="7 5" isAnimationActive={false} />
-                  <Line type="monotone" dataKey="senoide" name="senoide" stroke="#c98222" strokeWidth={1.3} dot={false} opacity={0.8} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="received" name="received filtered" stroke="#0c6b56" strokeWidth={2.1} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="expected" name="expected filtered" stroke="#1e67a6" strokeWidth={1.8} dot={false} strokeDasharray="7 5" isAnimationActive={false} />
+                  <Line type="monotone" dataKey="sine" name="sine wave" stroke="#c98222" strokeWidth={1.3} dot={false} opacity={0.8} isAnimationActive={false} />
                   <ReferenceLine y={0} stroke="#26332f" strokeDasharray="3 3" />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -300,16 +300,16 @@ export default function Home() {
 
           <div className="method-grid">
             <article>
-              <h3><Sigma size={17} /> Como validar</h3>
-              <p>Use um sinal sintético com baixa frequência somada a uma senoide no passband. A saída filtrada deve coincidir com a referência recalculada aqui e a componente lenta deve cair depois do transiente inicial.</p>
+              <h3><Sigma size={17} /> How to validate</h3>
+              <p>Use a synthetic signal with a low-frequency component added to a passband sine wave. The filtered output should match the reference recalculated here, and the slow component should drop after the initial transient.</p>
             </article>
             <article>
-              <h3><Database size={17} /> O que colar</h3>
-              <p>São aceitos números separados por espaço, vírgula, quebra de linha ou ponto e vírgula. Cole exatamente o vetor antes do filtro e o vetor retornado por <code>measurement.ecgMV()</code>.</p>
+              <h3><Database size={17} /> What to paste</h3>
+              <p>Numbers separated by spaces, commas, line breaks, or semicolons are accepted. Paste exactly the vector before filtering and the vector returned by <code>measurement.ecgMV()</code>.</p>
             </article>
             <article>
-              <h3><Activity size={17} /> Fórmula espelhada</h3>
-              <p>A página usa <code>tan(π × 0.8 / fs)</code> e a mesma equação de forma direta II transposta da implementação C++ para reduzir divergência entre ferramenta e código.</p>
+              <h3><Activity size={17} /> Mirrored formula</h3>
+              <p>The page uses <code>tan(π × 0.8 / fs)</code> and the same transposed direct-form II equation as the C++ implementation to reduce divergence between the tool and the code.</p>
             </article>
           </div>
         </section>
